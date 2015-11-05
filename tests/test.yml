@@ -2,7 +2,7 @@
 - hosts: localhost
   remote_user: root
   vars:
-    - firewall_allowed_tcp_ports:
+    - firewall_allowed_input_tcp_ports:
       - "9123"
   roles:
     - ansible-role-firewall
