@@ -8,6 +8,33 @@ The default policy is DROP for INPUT/OUTPUT/FORWARD
 
 After the role is run, a `firewall` init service will be available on the server. You can use `service firewall [start|stop|restart|status]` to control the firewall.   
 
+
+## BC with original fork
+Because the default policy switch to DROP for OUTPUT    
+You need to update your vars.     
+
+Before     
+```yaml
+firewall_allowed_tcp_ports:
+  - 22
+  
+firewall_allowed_udp_ports:
+  - 53
+```
+
+After    
+```yaml
+firewall_allowed_input_tcp_ports:
+  - 22
+firewall_allowed_output_tcp_ports:
+  - 22
+  
+firewall_allowed_input_udp_ports:
+  - 53
+firewall_allowed_output_udp_ports:
+  - 53
+```
+
 ## Requirements
 
 - None
