@@ -1,11 +1,52 @@
 ---
-firewall_allowed_tcp_ports:
-  - "22"
-  - "25"
-  - "80"
-  - "443"
-firewall_allowed_udp_ports: []
+##########
+# iptables
+###########
+firewall_disable_spoofing: true # Prevent ip spoofing
+firewall_drop_all_traffic: true # Drop all non authorized traffic
+firewall_accept_established: true # Accept traffic already established
+firewall_accept_loopback: true # Accept traffic from loopback interface (localhost).
+firewall_accept_icmp_request: true # Accept icmp ping requests.
+firewall_accept_ntp: true # Allow NTP traffic for time synchronization.
+firewall_enable_dos_limit: true # Deny of service prevention
+firewall_log_dropped_packets: true # Log other incoming requests (all of which are dropped) at 15/minute max.
+firewall_enable_scan_limit: true # Port scanning prevention
+firewall_allowed_input_tcp_ports:
+  - "20:21" # FTP
+  - "22" # SSH
+  - "25" # SMTP
+  - "53" # DNS
+  - "80" # HTTP
+  - "110" # POP3
+  - "143" # IMAP
+  - "443" # HTTPS
+  - "9418" # Git
+firewall_allowed_input_udp_ports:
+  - "53"
+firewall_allowed_output_tcp_ports:
+  - "20:21" # FTP
+  - "22" # SSH
+  - "25" # SMTP
+  - "53" # DNS
+  - "80" # HTTP
+  - "110" # POP3
+  - "143" # IMAP
+  - "443" # HTTPS
+  - "9418" # Git
+firewall_allowed_output_udp_ports:
+  - "53"
+  - "123" # NTP
+
 firewall_forwarded_tcp_ports: []
 firewall_forwarded_udp_ports: []
+firewall_nat_networks: []
+firewall_nat_forwarded_tcp_ports: []
+firewall_nat_forwarded_udp_ports: []
 firewall_additional_rules: []
-firewall_log_dropped_packets: true
+firewall_disabled_on_iface: []
+firewall_networks: []
+firewall_multicast_networks: []
+firewall_broadcast_networks: []
+firewall_forwarded_networks: []
+firewall_ipfailovers: []
+firewall_nat_enabled: true

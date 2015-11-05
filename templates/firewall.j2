@@ -16,6 +16,9 @@
 ### END INIT INFO
 
 # Carry out specific functions when asked to by the system
+
+# {{ ansible_managed }}
+
 case "$1" in
   start)
     echo "Starting firewall."
@@ -23,7 +26,15 @@ case "$1" in
     ;;
   stop)
     echo "Stopping firewall."
-    iptables -F
+    iptables -F \
+    && iptables -X \
+    {% if firewall_nat_enabled %}
+    && iptables -t nat -F \
+    && iptables -t nat -X \
+    {% endif %}
+    && iptables -P INPUT ACCEPT \
+    && iptables -P OUTPUT ACCEPT \
+    && iptables -P FORWARD ACCEPT \
     ;;
   restart)
     echo "Restarting firewall."

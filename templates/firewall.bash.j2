@@ -19,8 +19,15 @@
 #   9000: SonarQube
 #
 # @author Jeff Geerling
+# @author reminec (upgrade)
 
-# No spoofing.
+###########################
+# General
+###########################
+
+# {{ ansible_managed }}
+{% if firewall_disable_spoofing %}
+# No spoofing
 if [ -e /proc/sys/net/ipv4/conf/all/rp_filter ]
 then
 for filter in /proc/sys/net/ipv4/conf/*/rp_filter
@@ -28,16 +35,62 @@ do
 echo 1 > $filter
 done
 fi
+{% endif %}
 
 # Remove all rules and chains.
 iptables -F
 iptables -X
+{% if firewall_nat_enabled %}
+iptables -t nat -F
+iptables -t nat -X
+{% endif %}
+iptables -P INPUT ACCEPT
+iptables -P OUTPUT ACCEPT
+iptables -P FORWARD ACCEPT
 
+{% if firewall_drop_all_traffic %}
+# Drop all traffic not accepted
+iptables -t filter -P INPUT DROP 
+iptables -t filter -P FORWARD DROP 
+iptables -t filter -P OUTPUT DROP 
+{% endif %}
+
+{% if firewall_accept_established %}
+# Accept traffic already established
+iptables -A INPUT -m state --state RELATED,ESTABLISHED -j ACCEPT 
+iptables -A OUTPUT -m state --state RELATED,ESTABLISHED -j ACCEPT
+{% endif %}
+
+{% if firewall_accept_loopback %}
 # Accept traffic from loopback interface (localhost).
-iptables -A INPUT -i lo -j ACCEPT
+iptables -t filter -A INPUT -i lo -j ACCEPT 
+iptables -t filter -A OUTPUT -o lo -j ACCEPT
+{% endif %}
+
+{% if firewall_accept_icmp_request %}
+# Accept icmp ping requests.
+iptables -t filter -A INPUT -p icmp -j ACCEPT 
+iptables -t filter -A OUTPUT -p icmp -j ACCEPT
+{% endif %}
+
+{% if firewall_accept_ntp %}
+# Allow NTP traffic for time synchronization.
+iptables -t filter -A OUTPUT -p udp --dport 123 -j ACCEPT
+{% endif %}
+
+{% if firewall_enable_dos_limit %}
+# Deny of service prevention
+iptables -A FORWARD -p tcp --syn -m limit --limit 1/second -j ACCEPT
+iptables -A FORWARD -p udp -m limit --limit 1/second -j ACCEPT
+iptables -A FORWARD -p icmp --icmp-type echo-request -m limit --limit 1/second -j ACCEPT
+{% endif %}
+
+{% if firewall_enable_scan_limit %}
+# Port scanning
+iptables -A FORWARD -p tcp --tcp-flags SYN,ACK,FIN,RST RST -m limit --limit 1/s -j ACCEPT
+{% endif %}
 
 # Forwarded ports.
-{# Add a rule for each forwarded port #}
 {% for forwarded_port in firewall_forwarded_tcp_ports %}
 iptables -t nat -I PREROUTING -p tcp --dport {{ forwarded_port.src }} -j REDIRECT --to-port {{ forwarded_port.dest }}
 iptables -t nat -I OUTPUT -p tcp -o lo --dport {{ forwarded_port.src }} -j REDIRECT --to-port {{ forwarded_port.dest }}
@@ -47,29 +100,120 @@ iptables -t nat -I PREROUTING -p udp --dport {{ forwarded_port.src }} -j REDIREC
 iptables -t nat -I OUTPUT -p udp -o lo --dport {{ forwarded_port.src }} -j REDIRECT --to-port {{ forwarded_port.dest }}
 {% endfor %}
 
-# Open ports.
-{# Add a rule for each open port #}
-{% for port in firewall_allowed_tcp_ports %}
-iptables -A INPUT -p tcp -m tcp --dport {{ port }} -j ACCEPT
+{% if firewall_ipfailovers is defined %}
+###########################
+# Allow traffic through ipfailovers
+###########################
+{% for ip in firewall_ipfailovers %}
+iptables -t filter -A FORWARD -s {{ ip }} -j ACCEPT
+iptables -t filter -A FORWARD -d {{ ip }} -j ACCEPT
 {% endfor %}
-{% for port in firewall_allowed_udp_ports %}
-iptables -A INPUT -p udp -m udp --dport {{ port }} -j ACCEPT
+{% endif %}
+
+{% if firewall_forwarded_network is defined %}
+###########################
+# Forwarded network
+###########################
+{% for network in firewall_forwarded_networks %}
+iptables -A FORWARD -i {{ network.iface_input }} -o {{ network.iface_output }} -j ACCEPT
+iptables -A FORWARD -i {{ network.iface_output }} -o {{ network.iface_input }}  -m state --state ESTABLISHED,RELATED -j ACCEPT
+{% endfor %}
+{% endif %}
+
+{% if firewall_disabled_on_iface is defined %}
+###########################
+# Disable firewall for interface below
+###########################
+{% for network in firewall_disabled_on_iface %}
+iptables -A FORWARD -i {{ network }} -j ACCEPT
+iptables -A INPUT -i {{ network }} -j ACCEPT
+iptables -A OUTPUT -o {{ network }} -j ACCEPT
+{% endfor %}
+{% endif %}
+
+{% if firewall_networks is defined %}
+###########################
+# Enable communication for thoses networks
+###########################
+{% for network in firewall_networks %}
+iptables -A INPUT -s {{ network }} -d {{ network }} -j ACCEPT
+iptables -A OUTPUT -s {{ network }} -d {{ network }} -j ACCEPT
+{% endfor %}
+{% endif %}
+
+{% if firewall_multicast_networks is defined %}
+###########################
+# Allow Multicast for thoses network
+###########################
+{% for network in firewall_multicast_networks %}
+iptables -A INPUT -s {{ network }} -m pkttype --pkt-type multicast -j ACCEPT
+iptables -A OUTPUT -d {{ network }} -m addrtype --dst-type MULTICAST -j ACCEPT
+{% endfor %}
+{% endif %}
+
+{% if firewall_broadcast_networks is defined %}
+###########################
+# Allow Broadcast for thoses network
+###########################
+{% for network in firewall_broadcast_networks %}
+iptables -A INPUT -s {{ network }} -m pkttype --pkt-type broadcast -j ACCEPT
+iptables -A OUTPUT -d {{ network }} -m pkttype --pkt-type broadcast -j ACCEPT
+{% endfor %}
+{% endif %}
+
+###########################
+# Nat configuration
+###########################
+{% for nat in firewall_nat_networks %}
+### For subnet {{ nat.cidr }}
+iptables -A FORWARD -s {{ nat.cidr }} -d {{ nat.cidr }} -j ACCEPT # Allow subnet communication
+{% for iface in nat.ifaces_allowed %}
+  # allow forwarding for {{ iface }}
+  iptables -A FORWARD -i {{ iface }} -d {{ nat.cidr }} -j ACCEPT # allow forwarding in
+  iptables -A FORWARD -s {{ nat.cidr }} -o {{ iface }} -j ACCEPT # allow forwarding out
+{% endfor %}
+{% for iface in nat.ifaces_masquered %}
+  # MASQUERADE for {{ iface }}
+  iptables -t nat -A POSTROUTING -s '{{ nat.cidr }}' -o {{ iface }} -j MASQUERADE # Nat masquerade 
+{% endfor %}
 {% endfor %}
 
-# Accept icmp ping requests.
-iptables -A INPUT -p icmp -j ACCEPT
+# Nat forwarded tcp ports
+{% for forwarded_port in firewall_nat_forwarded_tcp_ports %}
+iptables -t nat -A PREROUTING -i {{ forwarded_port.iface }} -p tcp --dport {{ forwarded_port.src }} -j DNAT --to {{ forwarded_port.addr }}:{{ forwarded_port.dest }}
+{% endfor %}
 
-# Allow NTP traffic for time synchronization.
-iptables -A OUTPUT -p udp --dport 123 -j ACCEPT
-iptables -A INPUT -p udp --sport 123 -j ACCEPT
+# Nat forwarded udp ports
+{% for forwarded_port in firewall_nat_forwarded_udp_ports %}
+iptables -t nat -A PREROUTING -i {{ forwarded_port.iface }} -p udp --dport {{ forwarded_port.src }} -j DNAT --to {{ forwarded_port.addr }}:{{ forwarded_port.dest }}
+{% endfor %}
+
+###########################
+# Open ports
+###########################
+
+{# Add a rule for each input open port #}
+{% for port in firewall_allowed_input_tcp_ports %}
+iptables -t filter -A INPUT -p tcp --dport {{ port }} -j ACCEPT
+{% endfor %}
+
+{% for port in firewall_allowed_input_udp_ports %}
+iptables -t filter -A INPUT -p udp --dport {{ port }} -j ACCEPT
+{% endfor %}
+
+{# Add a rule for each output open port #}
+{% for port in firewall_allowed_output_tcp_ports %}
+iptables -t filter -A OUTPUT -p tcp --dport {{ port }} -j ACCEPT
+{% endfor %}
+
+{% for port in firewall_allowed_output_udp_ports %}
+iptables -t filter -A OUTPUT -p udp --dport {{ port }} -j ACCEPT
+{% endfor %}
 
 # Additional custom rules.
 {% for rule in firewall_additional_rules %}
 {{ rule }}
 {% endfor %}
-
-# Allow established connections:
-iptables -A INPUT -m state --state ESTABLISHED,RELATED -j ACCEPT
 
 # Log EVERYTHING (ONLY for Debug).
 # iptables -A INPUT -j LOG
@@ -78,6 +222,3 @@ iptables -A INPUT -m state --state ESTABLISHED,RELATED -j ACCEPT
 # Log other incoming requests (all of which are dropped) at 15/minute max.
 iptables -A INPUT -m limit --limit 15/minute -j LOG --log-level 7 --log-prefix "Dropped by firewall: "
 {% endif %}
-
-# Drop all other traffic.
-iptables -A INPUT -j DROP
