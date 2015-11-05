@@ -1,12 +1,13 @@
 # Ansible Role: Firewall (iptables)
  
 [![Build Status](https://travis-ci.org/geerlingguy/ansible-role-firewall.svg?branch=master)](https://travis-ci.org/geerlingguy/ansible-role-firewall)    
-Reminec Fork:[![Build Status](https://travis-ci.org/reminec/ansible-role-firewall.svg?branch=master)](https://travis-ci.org/reminec/ansible-role-firewall)    
+Reminec Fork: [![Build Status](https://travis-ci.org/reminec/ansible-role-firewall.svg?branch=master)](https://travis-ci.org/reminec/ansible-role-firewall)    
 
 Installs a iptables-based firewall for RHEL/CentOS or Debian/Ubunty systems.    
 The default policy is DROP for INPUT/OUTPUT/FORWARD    
 
-After the role is run, a `firewall` init service will be available on the server. You can use `service firewall [start|stop|restart|status]` to control the firewall.   
+After the role is run, a `firewall` init service will be available on the server.     
+You can use `service firewall [start|stop|restart|status]` to control the firewall.   
 
 
 ## BC with original fork
