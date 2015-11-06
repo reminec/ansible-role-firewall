@@ -9,14 +9,14 @@ galaxy_info:
   min_ansible_version: 1.7.2
   platforms:
   - name: EL
-    - all
     versions:
+      - all
   - name: Debian
     versions:
-    - all
+      - all
   - name: Ubuntu
     versions:
-    - all
+      - all
   galaxy_tags:
     - networking
     - iptables
