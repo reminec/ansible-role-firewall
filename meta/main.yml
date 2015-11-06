@@ -2,21 +2,23 @@
 dependencies: []
 
 galaxy_info:
-  author: geerlingguy
-  description: Simple iptables firewall for most Unix-like systems.
-  company: "Midwestern Mac, LLC"
+  author: reminec
+  description: Install firewall/Router service wich use configurable iptables rules. Default policy to DROP INPUT/OUTPUT/FORWARD (Fork of geerlingguy.firewall)
+  company: "reminec"
   license: "license (BSD, MIT)"
-  min_ansible_version: 1.4
+  min_ansible_version: 1.7.2
   platforms:
   - name: EL
-    versions:
     - all
+    versions:
   - name: Debian
     versions:
     - all
   - name: Ubuntu
     versions:
     - all
-  categories:
+  galaxy_tags:
     - networking
-    - system
+    - iptables
+    - firewall
+    - router

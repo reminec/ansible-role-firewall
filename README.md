@@ -1,20 +1,20 @@
 # Ansible Role: Firewall (iptables)
- 
-[![Build Status](https://travis-ci.org/geerlingguy/ansible-role-firewall.svg?branch=master)](https://travis-ci.org/geerlingguy/ansible-role-firewall)    
-Reminec Fork: [![Build Status](https://travis-ci.org/reminec/ansible-role-firewall.svg?branch=master)](https://travis-ci.org/reminec/ansible-role-firewall)    
 
-Installs a iptables-based firewall for RHEL/CentOS or Debian/Ubunty systems.    
+> Forked from https://github.com/geerlingguy/ansible-role-firewall
+
+Reminec Fork: [![Build Status](https://travis-ci.org/reminec/ansible-role-firewall.svg?branch=master)](https://travis-ci.org/reminec/ansible-role-firewall)
+
+Installs an iptables-based firewall for RHEL/CentOS or Debian/Ubunty systems.    
 The default policy is DROP for INPUT/OUTPUT/FORWARD    
 
 After the role is run, a `firewall` init service will be available on the server.     
 You can use `service firewall [start|stop|restart|status]` to control the firewall.   
 
-
-## BC with original fork
+## Compatibility break with original fork 
 Because the default policy switch to DROP for OUTPUT    
-You need to update your vars.     
+You need to split your `allowed_tcp_port` 
 
-Before     
+**Before**     
 ```yaml
 firewall_allowed_tcp_ports:
   - 22
@@ -23,7 +23,7 @@ firewall_allowed_udp_ports:
   - 53
 ```
 
-After    
+**After**    
 ```yaml
 firewall_allowed_input_tcp_ports:
   - 22
@@ -46,11 +46,17 @@ firewall_allowed_output_udp_ports:
 
 ### Example usage - A list of TCP or UDP ports (respectively) to open to incoming traffic.
 
-    firewall_allowed_tcp_ports:
+    firewall_allowed_input_tcp_ports:
       - "22"
       - "80"
       ...
-    firewall_allowed_udp_ports: []
+    firewall_allowed_output_tcp_ports:
+      - "22"
+      - "80"
+      ...
+    firewall_allowed_input_udp_ports: []
+    firewall_allowed_output_udp_ports:
+      - 53firewall_forwarded_network: 
 
 ### Example usage - Forward `src` port to `dest` port, either TCP or UDP (respectively).
 
@@ -98,7 +104,7 @@ firewall_nat_networks:
     ifaces_masquered:
       - 'vmbr0'
 
-# Allow forwarding between thoses networks
+# Allow forwarding between thoses interfaces
 firewall_forwarded_network: 
   - iface_input: 'venet0'
     iface_output: 'vmbr0'
@@ -109,6 +115,12 @@ firewall_nat_forwarded_tcp_ports:
     src:    '10042'
     addr:   '10.10.10.4'
     dest:   '22'
+```
+
+# Other additional rules
+```yaml
+firewall_additional_rules:
+  - iptables -A OUTPUT -m limit --limit 15/minute -j LOG --log-level 7 --log-prefix "Dropped by firewall[OUTPUT]: "
 ```
 
 ### Default configuration
@@ -157,12 +169,13 @@ None
 ```yaml
     - hosts: servers
       roles:
-         - reminec.iptables
+         - reminec.firewall
 ```
 ## License
 MIT / BSD
 
 ## Author Information
+This fork is maintained by [Reminec](https://github.com/reminec)    
 This role was created in 2014 by [Jeff Geerling](http://jeffgeerling.com/), author of [Ansible for DevOps](http://ansiblefordevops.com/).
-Contributor [Reminec](https://github.com/reminec)
+
 
