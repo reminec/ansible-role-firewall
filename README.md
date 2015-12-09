@@ -56,7 +56,7 @@ firewall_allowed_output_udp_ports:
       ...
     firewall_allowed_input_udp_ports: []
     firewall_allowed_output_udp_ports:
-      - 53firewall_forwarded_network: 
+      - 53
 
 ### Example usage - Forward `src` port to `dest` port, either TCP or UDP (respectively).
 
