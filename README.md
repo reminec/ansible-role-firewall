@@ -56,7 +56,7 @@ firewall_allowed_output_udp_ports:
       ...
     firewall_allowed_input_udp_ports: []
     firewall_allowed_output_udp_ports:
-      - 53
+      - "53"
 
 ### Example usage - Forward `src` port to `dest` port, either TCP or UDP (respectively).
 
@@ -120,7 +120,7 @@ firewall_nat_forwarded_tcp_ports:
 # Other additional rules
 ```yaml
 firewall_additional_rules:
-  - iptables -A OUTPUT -m limit --limit 15/minute -j LOG --log-level 7 --log-prefix "Dropped by firewall[OUTPUT]: "
+  - 'iptables -A OUTPUT -m limit --limit 15/minute -j LOG --log-level 7 --log-prefix "Dropped by firewall[OUTPUT]: "'
 ```
 
 ### Default configuration
