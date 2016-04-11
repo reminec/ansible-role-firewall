@@ -110,7 +110,7 @@ iptables -t filter -A FORWARD -d {{ ip }} -j ACCEPT
 {% endfor %}
 {% endif %}
 
-{% if firewall_forwarded_network is defined %}
+{% if firewall_forwarded_networks is defined %}
 ###########################
 # Forwarded network
 ###########################

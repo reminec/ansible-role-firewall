@@ -1,4 +1,5 @@
 ---
+
 - name: Ensure iptables is installed
   apt: pkg=iptables state=installed
 
@@ -7,7 +8,7 @@
 
 - name: Copy firewall script into place.
   template: src=firewall.bash.j2 dest=/etc/firewall.bash owner=root group=root mode=0744
-  notify: restart firewall
+  notify: Restart firewall
 
 - name: Copy firewall init script into place.
   template: src=firewall.j2 dest=/etc/init.d/firewall owner=root group=root mode=0755
